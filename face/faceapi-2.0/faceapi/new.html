@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="js/jquery-3.3.1.min.js"></script>
+  <!-- <script src="js/volume-meter.js"></script> -->
+  <script src="js/face-api.js"></script>
+  <script src="js/faceDetectionControls.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.css">
+  <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/js/materialize.min.js"></script>
+</head>
+<style>
+  #inputVideo {
+    width: 150px;
+    height: 150px;
+    /* background: red; */
+    -moz-border-radius: 75px;
+    -webkit-border-radius: 75px;
+    border-radius: 75px;
+    /* height : 220px;
+    width: 220px; */
+    position: absolute;
+    z-index: 9;
+    background-color: #f1f1f1;
+    text-align: center;
+    /* border: 1px solid #d3d3d3; */
+    border: 7px solid rgb(252, 217, 20);
+  }
+  
+
+  
+  </style>
+<body >
+
+    <!-- <div class="progress" id="loader">
+      <div class="indeterminate"></div>
+    </div> -->
+    <!-- <div id="mydiv" style="position: relative;border: 5px solid red;"  > -->
+      
+   
+    <div style="position: relative;" class="margin">
+      <video onloadedmetadata="onPlay(this)" id="inputVideo" autoplay muted></video>
+      <span id="overlay" />
+    </div>
+ 
+  <script>
+    let forwardTimes = []
+
+    Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri('models'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('models'),
+      faceapi.nets.tinyFaceDetector.loadFromUri('models'), // Corrected model name
+      faceapi.nets.faceLandmark68Net.loadFromUri('models')
+      // faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+      // faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+    ]).then(initFaceDetectionControls);
+
+    function updateTimeStats(timeInMs) {
+      forwardTimes = [timeInMs].concat(forwardTimes).slice(0, 30)
+      const avgTimeInMs = forwardTimes.reduce((total, t) => total + t) / forwardTimes.length
+      $('#time').val(`${Math.round(avgTimeInMs)} ms`)
+      $('#fps').val(`${faceapi.round(1000 / avgTimeInMs)}`)
+    }
+
+    async function onPlay() {
+      const videoEl = $('#inputVideo').get(0)
+
+      if(videoEl.paused || videoEl.ended || !isFaceDetectionModelLoaded())
+      {
+        return setTimeout(() => onPlay())
+      }
+
+      const options = new faceapi.TinyFaceDetectorOptions()
+
+      const ts = Date.now()
+
+      const result = await faceapi.detectAllFaces(videoEl,options ).withFaceLandmarks() //detects the all the faces in the screen
+
+      
+
+      // console.log(result)
+
+      updateTimeStats(Date.now() - ts)
+
+      //logic which checks for the only one person is on the screen
+      if (result.length == 1) {
+
+        //one face detected flow
+        $("#inputVideo").css("border-color", "green");
+
+        const canvas = $('#overlay').get(0)
+        const dims = faceapi.matchDimensions(canvas, videoEl, true)
+
+        const leftEye = result[0].landmarks.getLeftEye();
+        const rightEye = result[0].landmarks.getRightEye();
+
+        // console.log(leftEye)
+        // console.log(rightEye)
+        // Calculate the center of the face based on the eyes
+        const centerX = ((leftEye[0]._x + rightEye[3]._x)) / 1000;
+
+        console.log(centerX)
+
+        let direction = "Facing Forward";
+        if (centerX > 0.7) {
+            direction = "Facing Left";
+        } else if (centerX < 0.6) {
+            direction = "Facing Right";
+        }
+
+        console.log(direction)
+        
+        startSpeech()
+        // faceapi.draw.drawDetections(span, faceapi.resizeResults(result, dims))
+      }else{
+//multiple face detected
+        //face not detected block
+        // console.log("test");
+        $("#inputVideo").css("border-color", "red");
+      }
+
+      setTimeout(() => onPlay())
+    }
+
+    async function run() {
+      // load face detection model
+      await changeFaceDetector(TINY_FACE_DETECTOR)
+      changeInputSize(128)
+
+      // try to access users webcam and stream the images
+      // to the video element
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} })
+      const videoEl = $('#inputVideo').get(0)
+      videoEl.srcObject = stream
+    }
+
+    function updateResults() {}
+
+    $(document).ready(function() {
+      //renderNavBar('#navbar', 'webcam_face_detection')
+      initFaceDetectionControls()
+      run()
+    })
+
+    dragElement(document.getElementById("inputVideo"));
+
+function dragElement(elmnt) {
+  var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  if (document.getElementById(elmnt.id + "header")) {
+    /* if present, the header is where you move the DIV from:*/
+    document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+  } else {
+    /* otherwise, move the DIV from anywhere inside the DIV:*/
+    elmnt.onmousedown = dragMouseDown;
+  }
+
+  function dragMouseDown(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // get the mouse cursor position at startup:
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    // call a function whenever the cursor moves:
+    document.onmousemove = elementDrag;
+  }
+
+  function elementDrag(e) {
+    e = e || window.event;
+    e.preventDefault();
+    // calculate the new cursor position:
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    // set the element's new position:
+    elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+    elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+  }
+
+  function closeDragElement() {
+    /* stop moving when mouse button is released:*/
+    document.onmouseup = null;
+    document.onmousemove = null;
+  }
+}
+
+//audio
+
+var meter = null;
+	var WIDTH = 500;
+	var recordingStarted = false;
+
+	// initialize SpeechRecognition object
+	let recognition = new webkitSpeechRecognition();
+	recognition.maxAlternatives = 1;
+	recognition.continuous = true;
+
+	// Detect the said words
+	// // recognition.onresult = e => {
+
+	// //   	var current = event.resultIndex;
+
+	// //   	// Get a transcript of what was said.
+	// //   	var transcript = event.results[current][0].transcript;
+
+	// //   	// Add the current transcript with existing said values
+	// //   	var noteContent = $('#saidwords').val();
+	// //   	noteContent += ' ' + transcript;
+	// //   	$('#saidwords').val(noteContent);
+
+	// // }
+
+	// Stop recording
+	// function stopSpeech(){
+
+	//   	// Change status
+	//   	$('#status').text('Recording Stopped.');
+	//   	recordingStarted = false;
+
+	//   	// Stop recognition
+	//   	recognition.stop();
+	// }
+
+	// Start recording
+	function startSpeech(){
+	  	try{ // calling it twice will throw..
+	    	// $('#status').text('Noice Level.'); 
+	    	// $('#saidwords').val('');
+	    	recordingStarted = true;
+
+	    	// Start recognition
+	    	// recognition.start();
+	  	}
+	  	catch(e){}
+	}
+
+	navigator.getUserMedia({audio: true}, startUserMedia, function(e) {
+	  __log('No live audio input: ' + e);
+	});
+
+	function startUserMedia(stream) {
+	  	const ctx = new AudioContext();
+	  	const analyser = ctx.createAnalyser();
+	  	const streamNode = ctx.createMediaStreamSource(stream);
+	  	streamNode.connect(analyser);
+
+	  	// Create a new volume meter and connect it.
+	  	meter = createAudioMeter(ctx);
+	  	streamNode.connect(meter);
+
+	  	drawLoop();
+
+	}
+
+	// Create pitch bar
+	function drawLoop( time ) {
+
+	  	var pitchVolume = meter.volume*WIDTH*1.4;
+
+		  var width = 0;
+		  var color;
+
+	  	// Pitch detection minimum volume
+	  	var minimum_volume = 300;
+
+	  	// Get width if Recording started
+	  	if(recordingStarted){
+
+	      if(pitchVolume >= (minimum_volume)){
+				  //  width = 50;
+				   color = 'red';
+	    	}
+
+	  	}
+
+	  	// Update width
+		  // document.getElementById('voiceVolume').style.width = width+'%';
+      // document.getElementById('voiceVolume').style.background = color;
+      $("#inputVideo").css("border-color", color);
+		   
+// console.log(color);
+	  	rafID = window.requestAnimationFrame( drawLoop );
+	}
+  </script>
+</body>
+</html>

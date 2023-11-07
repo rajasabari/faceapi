@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Speech Recognition</title>
+</head>
+<body>
+
+    <div>
+        Status: <span id="detection_status">No speech detected</span>
+    </div>
+
+    <script>
+        // Check browser compatibility
+        var count = 1
+        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+            // Create SpeechRecognition object
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            // Set recognition parameters
+            // recognition.lang = 'IN'; // Language for speech recognition
+            // recognition.continuous = true;
+            recognition.interimResults = true;
+            // recognition.maxAlternatives = 1;
+            // Create AudioContext and AnalyzerNode for pitch detection
+            let audioContext;
+            let analyser;
+            let recording_initiated_flag = false;
+
+            // Event fired when speech recognition starts
+            // recognition.onstart = () => {
+            //     // console.log('Speech recognition started');
+            // };
+
+            // Event fired when speech recognition results are available
+            recognition.onresult = (event) => {
+
+                const transcript = event.results[event.results.length - 1][0].transcript;
+                // If the result is obsered then a valid word is detected
+                console.log('Human Speech detected');
+                // once detected recognition can be stopped
+                recognition.stop();       
+                //set the initiated flag to true 
+                recording_initiated_flag = true;
+                // function it initiate recodings
+                initiate_start_recording()
+                //stop recording after 30 sec
+                const stoptimer =setTimeout(initiate_stop_recording(),30000);
+            };
+
+            let focusListenerAdded = false;
+            // Event fired when speech recognition ends
+            recognition.onend = () => {
+                if (!focusListenerAdded && !recording_initiated_flag) {
+                    detectifspeaking();
+                }
+            };
+
+            // Event fired when an error occurs
+            recognition.onerror = (event) => {
+                console.log('Speech recognition Message:', event.error);
+                //if the error is "aborted" it might be due to user opens the multiple tabs.
+                if (event.error == "aborted"){
+                        if (!focusListenerAdded) {
+                            window.addEventListener("focus", focusEventListener);
+                            focusListenerAdded = true;
+                        }
+                }
+            };
+
+            function focusEventListener() {
+                detectifspeaking();
+                // Remove the "focus" event listener once it's focused
+                window.removeEventListener("focus", focusEventListener);
+                focusListenerAdded = false;
+            }
+
+            
+            // Start pitch detection and speech recognition when the pitch threshold is reached
+            function detectifspeaking() {
+                // Access the user's microphone
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then((stream) => {
+                        // Create the AudioContext and AnalyzerNode after a user gesture
+                        const startAudioContext = () => {
+                            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                            // Connect the microphone audio stream to the analyzer node
+                            const microphone = audioContext.createMediaStreamSource(stream);
+                            // microphone.connect(analyser);
+
+                            let isRecognitionRunning = false; // Track the status of speech recognition
+
+                                try {
+                                if (!isRecognitionRunning) {
+                                    recognition.start();
+                                    isRecognitionRunning = true;
+                                } 
+                                } catch (error) {
+                                    console.log(error)
+                                }
+                               
+                        };
+                       
+                        startAudioContext()
+                    })
+                    .catch((error) => {
+                        console.error('Error accessing microphone:', error);
+                    });
+            }
+            // Call the function to start pitch detection and speech recognition
+            detectifspeaking();
+        } else {
+            console.error('Speech recognition not supported in this browser');
+        }
+    </script>
+</body>
+
+</html>

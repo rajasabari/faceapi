@@ -1,0 +1,11 @@
+data
+demo
+plugins
+scripts
+tests
+.eslintrc
+.gitignore
+changelog.md
+hmm.md
+rollup.config.js
+scratch.js

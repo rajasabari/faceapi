@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Microsoft Teams Screen Sharing Detection</title>
+</head>
+<body>
+    <h1>Microsoft Teams Screen Sharing Detection</h1>
+
+    <script>
+        // Function to check for Microsoft Teams window
+        function checkForTeamsWindow() {
+            const teamsWindow = window.open('', 'Microsoft Teams');
+            
+            if (teamsWindow) {
+                console.log('Microsoft Teams window found. It might be active.');
+                // You can take appropriate actions within your application here.
+                teamsWindow.close();
+            } else {
+                console.log('Microsoft Teams window not found.');
+            }
+        }
+        
+        // Check for Microsoft Teams window periodically
+        setInterval(checkForTeamsWindow, 5000); // Check every 5 seconds
+    </script>
+</body>
+</html>

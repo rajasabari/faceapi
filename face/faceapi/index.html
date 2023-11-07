@@ -67,7 +67,7 @@
 
       const ts = Date.now()
 
-      const result = await faceapi.detectAllFaces(videoEl,options )
+      const result = await faceapi.detectAllFaces(videoEl,options ) //detects the all the faces in the screen
 
       
 
@@ -75,7 +75,10 @@
 
       updateTimeStats(Date.now() - ts)
 
+      //logic which checks for the only one person is on the screen
       if (result.length == 1) {
+
+        //one face detected flow
         $("#inputVideo").css("border-color", "green");
 
         const canvas = $('#overlay').get(0)
@@ -83,7 +86,7 @@
         startSpeech()
         // faceapi.draw.drawDetections(span, faceapi.resizeResults(result, dims))
       }else{
-
+//multiple face detected
         //face not detected block
         // console.log("test");
         $("#inputVideo").css("border-color", "red");
@@ -232,12 +235,12 @@ var meter = null;
 		  var color;
 
 	  	// Pitch detection minimum volume
-	  	var minimum_volume = -1;
+	  	var minimum_volume = 300;
 
 	  	// Get width if Recording started
 	  	if(recordingStarted){
 
-	      if(pitchVolume >= (minimum_volume+80)){
+	      if(pitchVolume >= (minimum_volume)){
 				  //  width = 50;
 				   color = 'red';
 	    	}

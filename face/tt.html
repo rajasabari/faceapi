@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech Recognition</title>
+</head>
+<body>
+    <div>
+        Status: <span id="detection_status">No speech detected</span>
+    </div>
+
+    <script>
+        const pitchThreshold = 0.1; // Adjust this threshold as needed
+        let isRecognitionRunning = false;
+        let audioContext;
+        let analyser;
+        let recognition;
+
+        async function initializeRecognition() {
+            try {
+                // Check for speech recognition support
+                if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                    recognition.interimResults = true;
+                    recognition.onresult = handleRecognitionResult;
+                    recognition.onerror = handleRecognitionError;
+
+                    await setupMicrophone();
+                } else {
+                    throw new Error('Speech recognition not supported in this browser');
+                }
+            } catch (error) {
+                console.error(error.message);
+            }
+        }
+
+        async function setupMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+
+                const microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+            }
+        }
+
+        function handleRecognitionResult(event) {
+            const transcript = event.results[event.results.length - 1][0].transcript;
+            console.log('Transcript:', transcript);
+            updateStatus('Human Speech detected');
+            stopRecognition();
+        }
+
+        function handleRecognitionError(event) {
+            console.error('Speech recognition Message:', event.error);
+            if (event.error !== "aborted") {
+                startRecognitionOnPitchThreshold();
+            }
+        }
+
+        function startRecognitionOnPitchThreshold() {
+            if (!isRecognitionRunning) {
+                recognition.start();
+                isRecognitionRunning = true;
+                console.log('Speech recognition started');
+            }
+        }
+
+        function stopRecognition() {
+            recognition.stop();
+            isRecognitionRunning = false;
+            console.log('Speech recognition stopped');
+        }
+
+        function updateStatus(message) {
+            const detectionStatusElement = document.getElementById('detection_status');
+            detectionStatusElement.textContent = message;
+        }
+
+        // Initialize the recognition process
+        initializeRecognition();
+    </script>
+</body>
+</html>

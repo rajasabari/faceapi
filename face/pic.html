@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Direction Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+
+</head>
+<body>
+    <input type="file" id="imageInput" accept="image/*">
+    <canvas id="inputImage"></canvas>
+    <script>
+        const image = document.getElementById('inputImage');
+        const canvas = faceapi.createCanvasFromMedia(image);
+        document.body.append(canvas);
+        const displaySize = { width: image.width, height: image.height };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        // Load the models (you may need to adjust the path to the model files)
+        Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+        ]).then(start);
+
+        document.getElementById('imageInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function () {
+                    const img = new Image();
+                    img.src = reader.result;
+                    img.onload = function () {
+                        image.src = img.src;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function start() {
+            // Detect the face in the loaded image
+            faceapi.detectSingleFace(image)
+                .withFaceLandmarks()
+                .then((detection) => {
+                    if (detection) {
+                        const faceDirection = calculateFaceDirection(detection.landmarks._positions);
+                        console.log(`Face direction: ${faceDirection}`);
+                    } else {
+                        console.log('No face detected in the image.');
+                    }
+                });
+        }
+
+        function calculateFaceDirection(landmarks) {
+            // You can analyze the face landmarks to determine the direction
+            // For example, you can check the relative positions of eyes, nose, and mouth
+
+            // Implement your direction calculation logic here
+
+            return 'Direction detected';
+        }
+    </script>
+</body>
+</html>
